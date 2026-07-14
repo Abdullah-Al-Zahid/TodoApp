@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"/>
 
     <application
         android:allowBackup="true"
@@ -25,6 +30,7 @@
         <activity android:name=".AddTaskActivity" android:exported="false"/>
         <activity android:name=".SearchActivity" android:exported="false"/>
         <activity android:name=".MissionActivity" android:exported="false"/>
+        <activity android:name=".ProfileActivity" android:exported="false"/>
 
     </application>
 </manifest>

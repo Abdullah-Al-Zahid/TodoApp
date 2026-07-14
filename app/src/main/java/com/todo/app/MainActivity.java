@@ -130,7 +130,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Logout
         tvLogout.setOnClickListener(v -> logout());
-        tvAvatar.setOnClickListener(v -> logout());
+        tvAvatar.setOnClickListener(v -> {
+            startActivityForResult(
+                    new Intent(this, ProfileActivity.class), 200);
+        });
 
         // AI Plan
         tvAiPlan.setOnClickListener(v -> {
@@ -400,7 +403,35 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 100) loadTasks();
+        if (requestCode == 100) {
+            loadTasks();
+        }
+        if (requestCode == 200) {
+            username = prefs.getString("username", "User");
+            tvAvatar.setText(String.valueOf(username.charAt(0)).toUpperCase());
+            tvUserInfo.setText("👤 " + username);
+
+            // Load profile photo on avatar
+            String photoPath = prefs.getString("photoPath", "");
+            if (!photoPath.isEmpty()) {
+                java.io.File imgFile = new java.io.File(photoPath);
+                if (imgFile.exists()) {
+                    android.graphics.Bitmap bitmap =
+                            android.graphics.BitmapFactory.decodeFile(photoPath);
+                    if (bitmap != null) {
+                        // Scale bitmap to fit avatar
+                        android.graphics.Bitmap scaled =
+                                android.graphics.Bitmap.createScaledBitmap(
+                                        bitmap, 100, 100, true);
+                        android.graphics.drawable.BitmapDrawable drawable =
+                                new android.graphics.drawable.BitmapDrawable(
+                                        getResources(), scaled);
+                        tvAvatar.setBackground(drawable);
+                        tvAvatar.setText("");
+                    }
+                }
+            }
+        }
     }
 
     @Override

@@ -11,7 +11,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "TodoApp.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 3;
 
     // Tables
     private static final String TABLE_USERS = "users";
@@ -52,15 +52,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        // Create users table
         String createUsers = "CREATE TABLE " + TABLE_USERS + " (" +
                 U_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 U_USERNAME + " TEXT NOT NULL, " +
                 U_EMAIL + " TEXT NOT NULL UNIQUE, " +
-                U_PASSWORD + " TEXT NOT NULL)";
+                U_PASSWORD + " TEXT NOT NULL, " +
+                "photo_path TEXT DEFAULT '')";
         db.execSQL(createUsers);
 
-        // Create tasks table
         String createTasks = "CREATE TABLE " + TABLE_TASKS + " (" +
                 T_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 T_USER_ID + " INTEGER NOT NULL, " +
@@ -75,12 +74,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 T_DUE_DATE + " TEXT DEFAULT '', " +
                 T_CREATED_AT + " INTEGER DEFAULT 0)";
         db.execSQL(createTasks);
+
+        String createJournals = "CREATE TABLE IF NOT EXISTS journals (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "user_id INTEGER NOT NULL, " +
+                "date TEXT NOT NULL, " +
+                "content TEXT DEFAULT '', " +
+                "updated_at INTEGER DEFAULT 0)";
+        db.execSQL(createJournals);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_TASKS);
+        db.execSQL("DROP TABLE IF EXISTS journals");
         onCreate(db);
     }
 
@@ -296,5 +304,102 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         task.setDueDate(cursor.getString(cursor.getColumnIndexOrThrow(T_DUE_DATE)));
         task.setCreatedAt(cursor.getLong(cursor.getColumnIndexOrThrow(T_CREATED_AT)));
         return task;
+    }
+    // ── PROFILE METHODS ──────────────────────────────────────
+
+    public boolean updateUsername(int userId, String newUsername) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(U_USERNAME, newUsername);
+        int rows = db.update(TABLE_USERS, values,
+                U_ID + "=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public boolean updateProfilePhoto(int userId, String photoPath) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("photo_path", photoPath);
+        int rows = db.update(TABLE_USERS, values,
+                U_ID + "=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public String getProfilePhoto(int userId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_USERS, new String[]{"photo_path"},
+                U_ID + "=?", new String[]{String.valueOf(userId)},
+                null, null, null);
+        if (cursor.moveToFirst()) {
+            String path = cursor.getString(0);
+            cursor.close();
+            return path;
+        }
+        cursor.close();
+        return null;
+    }
+
+// ── JOURNAL METHODS ──────────────────────────────────────
+
+    public boolean saveJournal(int userId, String date, String content) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        // Check if journal for this date exists
+        Cursor cursor = db.query("journals", null,
+                "user_id=? AND date=?",
+                new String[]{String.valueOf(userId), date},
+                null, null, null);
+        if (cursor.getCount() > 0) {
+            cursor.close();
+            ContentValues values = new ContentValues();
+            values.put("content", content);
+            values.put("updated_at", System.currentTimeMillis());
+            int rows = db.update("journals", values,
+                    "user_id=? AND date=?",
+                    new String[]{String.valueOf(userId), date});
+            return rows > 0;
+        }
+        cursor.close();
+        ContentValues values = new ContentValues();
+        values.put("user_id", userId);
+        values.put("date", date);
+        values.put("content", content);
+        values.put("updated_at", System.currentTimeMillis());
+        long result = db.insert("journals", null, values);
+        return result != -1;
+    }
+
+    public String getJournal(int userId, String date) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query("journals", new String[]{"content"},
+                "user_id=? AND date=?",
+                new String[]{String.valueOf(userId), date},
+                null, null, null);
+        if (cursor.moveToFirst()) {
+            String content = cursor.getString(0);
+            cursor.close();
+            return content;
+        }
+        cursor.close();
+        return "";
+    }
+
+    public List<String[]> getAllJournals(int userId) {
+        List<String[]> journals = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query("journals",
+                new String[]{"date", "content"},
+                "user_id=?",
+                new String[]{String.valueOf(userId)},
+                null, null, "date DESC");
+        if (cursor.moveToFirst()) {
+            do {
+                journals.add(new String[]{
+                        cursor.getString(0),
+                        cursor.getString(1)
+                });
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return journals;
     }
 }
