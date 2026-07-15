@@ -91,7 +91,7 @@
                     android:id="@+id/et_password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="8dp"
                     android:background="@drawable/bg_input"
                     android:hint="Password"
                     android:inputType="textPassword"
@@ -99,6 +99,80 @@
                     android:textColor="@color/text_primary"
                     android:textColorHint="@color/text_hint"
                     android:textSize="14sp"/>
+
+                <!-- Password strength bar -->
+                <LinearLayout
+                    android:id="@+id/ll_strength"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:id="@+id/v_s1"
+                            android:layout_width="0dp"
+                            android:layout_height="4dp"
+                            android:layout_weight="1"
+                            android:background="#E1DFDD"
+                            android:layout_marginEnd="3dp"/>
+
+                        <View
+                            android:id="@+id/v_s2"
+                            android:layout_width="0dp"
+                            android:layout_height="4dp"
+                            android:layout_weight="1"
+                            android:background="#E1DFDD"
+                            android:layout_marginEnd="3dp"/>
+
+                        <View
+                            android:id="@+id/v_s3"
+                            android:layout_width="0dp"
+                            android:layout_height="4dp"
+                            android:layout_weight="1"
+                            android:background="#E1DFDD"
+                            android:layout_marginEnd="3dp"/>
+
+                        <View
+                            android:id="@+id/v_s4"
+                            android:layout_width="0dp"
+                            android:layout_height="4dp"
+                            android:layout_weight="1"
+                            android:background="#E1DFDD"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:id="@+id/tv_strength_label"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textSize="12sp"
+                            android:text="Weak"/>
+
+                        <TextView
+                            android:id="@+id/tv_strength_hint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_hint"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <!-- Error text -->
                 <TextView
