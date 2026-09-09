@@ -13,6 +13,8 @@ public class Task {
     private String listId;
     private String dueDate;
     private long createdAt;
+    private long reminderTime; // stores reminder timestamp
+    private boolean hasReminder; // does this task have a reminder?
 
     public Task() {
         this.priority = "normal";
@@ -24,6 +26,11 @@ public class Task {
         this.createdAt = System.currentTimeMillis();
     }
 
+
+    public long getReminderTime() { return reminderTime; }
+    public boolean isHasReminder() { return hasReminder; }
+    public void setReminderTime(long reminderTime) { this.reminderTime = reminderTime; }
+    public void setHasReminder(boolean hasReminder) { this.hasReminder = hasReminder; }
     public int getId() { return id; }
     public int getUserId() { return userId; }
     public String getTitle() { return title; }

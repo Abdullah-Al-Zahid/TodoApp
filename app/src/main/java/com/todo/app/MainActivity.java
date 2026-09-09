@@ -29,6 +29,12 @@ public class MainActivity extends AppCompatActivity {
     private String currentListId = "myday";
     private int selectedDuration = 25;
     private String selectedPriority = "normal";
+    private TextView tvDatePick, tvTimePick, tvReminderToggle, tvClearReminder;
+    private LinearLayout llReminder;
+    private int selectedYear = -1, selectedMonth, selectedDay;
+    private int selectedHour = -1, selectedMinute;
+    private boolean reminderSet = false;
+    private long reminderTimeMillis = 0;
     private int activeTimerTaskId = -1;
     private Handler timerHandler = new Handler();
     private Runnable timerRunnable;
@@ -103,8 +109,12 @@ public class MainActivity extends AppCompatActivity {
         rvTasks = findViewById(R.id.rv_tasks);
 
         // Set avatar
-        tvAvatar.setText(String.valueOf(username.charAt(0)).toUpperCase());
-        tvUserInfo.setText("👤 " + username);
+        if (username != null && !username.isEmpty()) {
+            tvAvatar.setText(String.valueOf(username.charAt(0)).toUpperCase());
+        } else {
+            tvAvatar.setText("U");
+        }
+        tvUserInfo.setText("👤 " + (username != null ? username : "User"));
 
         // Setup RecyclerView
         adapter = new TaskAdapter(this, taskList, new TaskAdapter.OnTaskClickListener() {
@@ -127,7 +137,32 @@ public class MainActivity extends AppCompatActivity {
         });
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
         rvTasks.setAdapter(adapter);
+        tvDatePick = findViewById(R.id.tv_date_pick);
+        tvTimePick = findViewById(R.id.tv_time_pick);
+        tvReminderToggle = findViewById(R.id.tv_reminder_toggle);
+        tvClearReminder = findViewById(R.id.tv_clear_reminder);
+        llReminder = findViewById(R.id.ll_reminder);
 
+        tvReminderToggle.setOnClickListener(v -> {
+            if (llReminder.getVisibility() == View.VISIBLE) {
+                llReminder.setVisibility(View.GONE);
+                reminderSet = false;
+                reminderTimeMillis = 0;
+            } else {
+                llReminder.setVisibility(View.VISIBLE);
+            }
+        });
+
+        tvDatePick.setOnClickListener(v -> showDatePicker());
+        tvTimePick.setOnClickListener(v -> showTimePicker());
+
+        tvClearReminder.setOnClickListener(v -> {
+            llReminder.setVisibility(View.GONE);
+            reminderSet = false;
+            reminderTimeMillis = 0;
+            tvDatePick.setText("📅 Pick Date");
+            tvTimePick.setText("⏰ Pick Time");
+        });
         // Logout
         tvLogout.setOnClickListener(v -> logout());
         tvAvatar.setOnClickListener(v -> {
@@ -313,10 +348,32 @@ public class MainActivity extends AppCompatActivity {
         task.setPriority(selectedPriority);
         task.setListId(currentListId.equals("important") ? "myday" : currentListId);
         task.setStarred(currentListId.equals("important"));
+        if (reminderSet && reminderTimeMillis > 0) {
+            task.setHasReminder(true);
+            task.setReminderTime(reminderTimeMillis);
+        }
         Task saved = db.addTask(task);
         taskList.add(0, saved);
         adapter.notifyItemInserted(0);
         rvTasks.scrollToPosition(0);
+        if (reminderSet && reminderTimeMillis > 0) {
+            if (android.os.Build.VERSION.SDK_INT >=
+                    android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(
+                        android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{
+                            android.Manifest.permission.POST_NOTIFICATIONS}, 200);
+                }
+            }
+            NotificationHelper.scheduleNotification(
+                    this, saved.getId(), saved.getTitle(), reminderTimeMillis);
+            reminderSet = false;
+            reminderTimeMillis = 0;
+            llReminder.setVisibility(View.GONE);
+            tvDatePick.setText("📅 Pick Date");
+            tvTimePick.setText("⏰ Pick Time");
+        }
         etAddTask.setText("");
         btnAdd.setVisibility(View.GONE);
         selectedPriority = "normal";
@@ -450,6 +507,51 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void showDatePicker() {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        android.app.DatePickerDialog dialog = new android.app.DatePickerDialog(
+                this,
+                (view, year, month, dayOfMonth) -> {
+                    selectedYear = year;
+                    selectedMonth = month;
+                    selectedDay = dayOfMonth;
+                    tvDatePick.setText(String.format(
+                            "📅 %d/%d/%d", dayOfMonth, month + 1, year));
+                    updateReminderTime();
+                },
+                calendar.get(java.util.Calendar.YEAR),
+                calendar.get(java.util.Calendar.MONTH),
+                calendar.get(java.util.Calendar.DAY_OF_MONTH));
+        dialog.getDatePicker().setMinDate(System.currentTimeMillis());
+        dialog.show();
+    }
+
+    private void showTimePicker() {
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        android.app.TimePickerDialog dialog = new android.app.TimePickerDialog(
+                this,
+                (view, hourOfDay, minute) -> {
+                    selectedHour = hourOfDay;
+                    selectedMinute = minute;
+                    tvTimePick.setText(String.format(
+                            "⏰ %02d:%02d", hourOfDay, minute));
+                    updateReminderTime();
+                },
+                calendar.get(java.util.Calendar.HOUR_OF_DAY),
+                calendar.get(java.util.Calendar.MINUTE),
+                true);
+        dialog.show();
+    }
+
+    private void updateReminderTime() {
+        if (selectedYear > 0 && selectedHour >= 0) {
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            calendar.set(selectedYear, selectedMonth, selectedDay,
+                    selectedHour, selectedMinute, 0);
+            reminderTimeMillis = calendar.getTimeInMillis();
+            reminderSet = true;
+        }
+    }
     private void logout() {
         stopTimer();
         prefs.edit().clear().apply();

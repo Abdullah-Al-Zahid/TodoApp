@@ -95,19 +95,24 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         showLoading(true);
-        User user = db.loginUser(email, password);
-        showLoading(false);
+        try {
+            User user = db.loginUser(email, password);
+            showLoading(false);
 
-        if (user != null) {
-            // Save user session
-            SharedPreferences.Editor editor = getSharedPreferences("TodoPrefs", MODE_PRIVATE).edit();
-            editor.putInt("userId", user.getId());
-            editor.putString("username", user.getUsername());
-            editor.putString("email", user.getEmail());
-            editor.apply();
-            goToMain();
-        } else {
-            showError("Invalid email or password");
+            if (user != null) {
+                // Save user session
+                SharedPreferences.Editor editor = getSharedPreferences("TodoPrefs", MODE_PRIVATE).edit();
+                editor.putInt("userId", user.getId());
+                editor.putString("username", user.getUsername());
+                editor.putString("email", user.getEmail());
+                editor.apply();
+                goToMain();
+            } else {
+                showError("Invalid email or password");
+            }
+        } catch (Exception e) {
+            showLoading(false);
+            showError("Login failed: " + e.getMessage());
         }
     }
 
@@ -131,11 +136,11 @@ public class LoginActivity extends AppCompatActivity {
         showLoading(false);
 
         if (success) {
+            toggleMode();
             showError("");
             tvError.setTextColor(getResources().getColor(R.color.green));
             tvError.setText("Account created! Please sign in.");
             tvError.setVisibility(View.VISIBLE);
-            toggleMode();
         } else {
             showError("Email already exists");
         }

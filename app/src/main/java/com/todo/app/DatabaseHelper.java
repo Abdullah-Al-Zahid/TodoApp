@@ -11,7 +11,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "TodoApp.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 6; // Incremented version to fix potential schema issues
 
     // Tables
     private static final String TABLE_USERS = "users";
@@ -72,7 +72,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 T_ELAPSED + " INTEGER DEFAULT 0, " +
                 T_LIST_ID + " TEXT DEFAULT 'myday', " +
                 T_DUE_DATE + " TEXT DEFAULT '', " +
-                T_CREATED_AT + " INTEGER DEFAULT 0)";
+                T_CREATED_AT + " INTEGER DEFAULT 0, " +
+                "reminder_time INTEGER DEFAULT 0, " +
+                "has_reminder INTEGER DEFAULT 0)";
         db.execSQL(createTasks);
 
         String createJournals = "CREATE TABLE IF NOT EXISTS journals (" +
@@ -117,20 +119,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public User loginUser(String email, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_USERS, null,
-                U_EMAIL + "=? AND " + U_PASSWORD + "=?",
-                new String[]{email, password}, null, null, null);
+        Cursor cursor = null;
+        try {
+            cursor = db.query(TABLE_USERS, null,
+                    U_EMAIL + "=? AND " + U_PASSWORD + "=?",
+                    new String[]{email, password}, null, null, null);
 
-        if (cursor.moveToFirst()) {
-            User user = new User();
-            user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(U_ID)));
-            user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(U_USERNAME)));
-            user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(U_EMAIL)));
-            user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(U_PASSWORD)));
-            cursor.close();
-            return user;
+            if (cursor != null && cursor.moveToFirst()) {
+                User user = new User();
+                user.setId(cursor.getInt(cursor.getColumnIndexOrThrow(U_ID)));
+                user.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(U_USERNAME)));
+                user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow(U_EMAIL)));
+                user.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(U_PASSWORD)));
+                return user;
+            }
+        } finally {
+            if (cursor != null) cursor.close();
         }
-        cursor.close();
         return null;
     }
 
@@ -167,6 +172,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(T_LIST_ID, task.getListId());
         values.put(T_DUE_DATE, task.getDueDate() != null ? task.getDueDate() : "");
         values.put(T_CREATED_AT, System.currentTimeMillis());
+        values.put("reminder_time", task.getReminderTime());
+        values.put("has_reminder", task.isHasReminder() ? 1 : 0);
         long id = db.insert(TABLE_TASKS, null, values);
         task.setId((int) id);
         return task;
@@ -228,6 +235,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(T_ELAPSED, task.getElapsed());
         values.put(T_LIST_ID, task.getListId());
         values.put(T_DUE_DATE, task.getDueDate() != null ? task.getDueDate() : "");
+        values.put("reminder_time", task.getReminderTime());
+        values.put("has_reminder", task.isHasReminder() ? 1 : 0);
         int rows = db.update(TABLE_TASKS, values,
                 T_ID + "=?", new String[]{String.valueOf(task.getId())});
         return rows > 0;
@@ -303,6 +312,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         task.setListId(cursor.getString(cursor.getColumnIndexOrThrow(T_LIST_ID)));
         task.setDueDate(cursor.getString(cursor.getColumnIndexOrThrow(T_DUE_DATE)));
         task.setCreatedAt(cursor.getLong(cursor.getColumnIndexOrThrow(T_CREATED_AT)));
+        try {
+            int reminderIdx = cursor.getColumnIndex("reminder_time");
+            if (reminderIdx != -1) task.setReminderTime(cursor.getLong(reminderIdx));
+            
+            int hasReminderIdx = cursor.getColumnIndex("has_reminder");
+            if (hasReminderIdx != -1) task.setHasReminder(cursor.getInt(hasReminderIdx) == 1);
+        } catch (Exception e) {
+            task.setReminderTime(0);
+            task.setHasReminder(false);
+        }
         return task;
     }
     // ── PROFILE METHODS ──────────────────────────────────────
